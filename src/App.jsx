@@ -677,14 +677,6 @@ function InternalMode() {
         </div>
 
         <div className="pf">
-          <label>Nationality</label>
-          <select value={profile.nationality} onChange={e => setP("nationality", e.target.value)}>
-            <option value="">Select…</option>
-            {NATIONALITIES.map(n => <option key={n}>{n}</option>)}
-          </select>
-        </div>
-
-        <div className="pf">
           <label>Exam System</label>
           <select value={profile.examSystem} onChange={e => setP("examSystem", e.target.value)}>
             <option value="">Select…</option>
@@ -796,58 +788,10 @@ function InternalMode() {
                     <div style={{ marginBottom: 24 }}>
                       <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Counselor Knowledge Agent</div>
                       <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                        Student profile auto-included in all queries. Ask anything or use a quick-start below.
+                        Student profile auto-included in all queries. Ask anything our partner Universties.
                       </div>
                     </div>
 
-                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--text-muted)", marginBottom: 10 }}>
-                      Section 6 — Prompt Templates
-                    </div>
-
-                    {[
-                      {
-                        icon: "🔍", label: "Find Options",
-                        prompt: hasProfile
-                          ? `Show me all programmes in Malaysia for a ${profile.nationality || "Kenyan"} student with ${profile.examSystem} ${profile.overallGrade}${profile.ielts ? " IELTS " + profile.ielts : ""}. Call Retrieve_Fees, Retrieve_Prospectus, and Retrieve_Application_Forms. Return a ranked table with programme, university, annual fee, duration, next intake, entry requirements, and eligibility status.`
-                          : `Show me all Business programmes in Malaysia within a USD 10,000–20,000/year budget with a September intake for a student with KCSE B+ and IELTS 5.5. Return a ranked table with programme, university, annual fee, duration, next intake, entry requirements, and eligibility status (✓/⚠/✗).`,
-                      },
-                      {
-                        icon: "✅", label: "Eligibility Check",
-                        prompt: hasProfile
-                          ? `Does a ${profile.nationality || "Kenyan"} student with ${profile.examSystem} ${profile.overallGrade}${profile.ielts ? " IELTS " + profile.ielts : ""} qualify for Computer Science? Run Calculate_Eligibility first, then Retrieve_Prospectus. List every requirement as ✓ Eligible, ⚠ Conditional, or ✗ Not Eligible with plain-language explanation for each failed check. Also check: intake availability, visa eligibility, and post-study work permit availability. If not eligible, list all alternatives at partner universities.`
-                          : `Does a Kenyan student with KCSE B+ and IELTS 5.5 qualify for Computer Science at APU? Run Calculate_Eligibility first. Check: grade requirement, subject prerequisites, IELTS requirement, intake availability, visa eligibility, and post-study work permit. Mark each ✓/⚠/✗ with plain-language explanation for any failures.`,
-                      },
-                      {
-                        icon: "⚖️", label: "Compare Options",
-                        prompt: `Compare APU Computer Science vs SEGi Computer Science vs Taylor's Computer Science side by side${hasProfile ? " for a student with " + profile.examSystem + " " + profile.overallGrade + (profile.ielts ? " IELTS " + profile.ielts : "") : ""}. Call Retrieve_Fees, Retrieve_Prospectus, and Retrieve_Application_Forms for each. Show all 13 fields: annual tuition (USD), estimated living cost, total Year 1 cost, scholarship (name + amount), net cost after scholarship, next intake, application deadline, duration, eligibility status, missing requirements, post-study work permit, QS ranking. Highlight lowest cost. End with a Counselor Recommendation.`,
-                      },
-                      {
-                        icon: "🎓", label: "Find Scholarships",
-                        prompt: hasProfile
-                          ? `Which programmes in Malaysia offer partial or full scholarships for a ${profile.nationality || "Kenyan"} student with ${profile.examSystem} ${profile.overallGrade}${profile.ielts ? " IELTS " + profile.ielts : ""}? Call Retrieve_Fees. Show: programme, university, scholarship name, value (USD or % of tuition), eligibility conditions, and whether this student qualifies. Rank by scholarship value.`
-                          : `Which Business and IT programmes in Malaysia offer partial or full scholarships for a student with KCSE B+ and IELTS 5.5? Show scholarship name, value, and eligibility conditions.`,
-                      },
-                      {
-                        icon: "📋", label: "Gap Plan",
-                        prompt: `The student does not currently meet the English/IELTS requirement for their chosen programme. Call Retrieve_Application_Forms. What pre-sessional English options are available at our partner universities, and what IELTS band would the student need to achieve after completion to meet the standard entry requirement?`,
-                      },
-                    ].map(({ icon, label, prompt }) => (
-                      <button key={label} onClick={() => sendMessage(prompt)}
-                        style={{
-                          display: "flex", gap: 14, alignItems: "flex-start", width: "100%",
-                          background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 10,
-                          padding: "11px 16px", marginBottom: 8, cursor: "pointer", textAlign: "left",
-                          fontFamily: "Montserrat, sans-serif", transition: "border-color 0.15s",
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.borderColor = "var(--primary)"}
-                        onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}>
-                        <span style={{ fontSize: 16 }}>{icon}</span>
-                        <div>
-                          <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 3 }}>{label}</div>
-                          <div style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{prompt}</div>
-                        </div>
-                      </button>
-                    ))}
                   </div>
                 ) : (
                   messages.map((m, i) => (
