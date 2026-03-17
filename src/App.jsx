@@ -235,14 +235,10 @@ const css = `
   @media (max-width: 768px) {
     .header { padding: 0 14px; }
     .header-subtitle { display: none; }
-
-    /* Layout: stack, full height, scroll naturally */
     .internal-wrapper {
       flex-direction: column; height: auto;
       min-height: calc(100vh - 64px); overflow: visible;
     }
-
-    /* Sidebar: hidden by default, shown as drawer */
     .profile-sidebar {
       display: none; flex-direction: column; width: 280px;
       padding: 14px; gap: 8px;
@@ -251,43 +247,31 @@ const css = `
     .sidebar-toggle-btn { display: flex; }
     .mobile-topbar { display: flex; }
     .sidebar-close-btn { display: block; }
-
-    /* Main content takes full width */
     .int-tab-bar {
       overflow-x: auto; flex-wrap: nowrap;
       padding: 8px 8px 0; gap: 2px;
     }
     .int-tab { padding: 7px 11px; font-size: 11px; }
     .main-panel { margin: 0 6px 10px; border-radius: 0 10px 10px 10px; }
-
-    /* Chat */
     .chat-area { padding: 14px 12px; max-height: calc(100vh - 220px); gap: 14px; }
     .msg { max-width: 94%; }
     .msg-bubble { padding: 10px 13px; font-size: 13px; }
     .input-bar { padding: 10px 12px; }
     .input-box { font-size: 14px; padding: 10px 13px; }
     .send-btn { width: 42px; height: 42px; font-size: 17px; }
-
-    /* Workflow panels */
     .workflow-panel { padding: 14px 12px; }
     .workflow-title { font-size: 15px; }
     .filter-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
     .filter-grid-2 { grid-template-columns: 1fr; }
     .filter-actions { gap: 8px; }
     .btn-primary, .btn-secondary { padding: 11px 16px; font-size: 13px; }
-
-    /* Tables — horizontal scroll */
     .results-box { padding: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .results-box table { min-width: 540px; }
     .results-box th, .results-box td { padding: 7px 9px; font-size: 12px; }
     .bubble-ai table { min-width: 400px; overflow-x: auto; display: block; }
     .bubble-ai th, .bubble-ai td { padding: 6px 8px; font-size: 11px; }
-
-    /* Subj rows in sidebar drawer */
     .subj-row span { font-size: 11px; }
     .subj-row select { width: 64px; }
-
-    /* Export bar */
     .export-bar { gap: 7px; }
     .export-bar .btn-secondary { padding: 8px 12px; font-size: 11px; }
   }
@@ -348,9 +332,10 @@ const FEE_RANGES     = ["Under USD 10,000/yr","USD 10,000–20,000/yr","USD 20,0
 const INTAKES        = ["January","May","September","Rolling"];
 const IELTS_BANDS    = ["5.0","5.5","6.0","6.5","7.0","7.5+"];
 const WORK_EXP       = ["0 years","1–2 years","3–5 years","5+ years"];
-const UNIVERSITIES   = ["APU","SEGi","Sunway","Taylor's","INTI","MSU","University of Cyberjaya","Quest International University"];
 
-// Flat list of all programmes for compare dropdown (all ~40 options, grouped by category)
+// FIX: Removed "INTI" — not a partner university. 7 partners are SEGi, Sunway, Taylor's, UoC, QIU, APU, MSU.
+const UNIVERSITIES   = ["APU","SEGi","Sunway","Taylor's","MSU","University of Cyberjaya","Quest International University"];
+
 const ALL_PROGRAMMES = Object.entries({
   "Medicine & Health Sciences":         ["Medicine (MBBS)", "Pharmacy", "Nursing", "Physiotherapy", "Biomedical Sciences"],
   "Business, Management & Marketing":   ["Business Administration", "Marketing", "Digital Marketing", "International Business", "Finance", "Accounting", "HR Management"],
@@ -391,7 +376,6 @@ function formatMarkdown(text) {
     return result + "</table>";
   });
 
-  // Eligibility cell colouring (Section 5 — auto-highlight)
   html = html
     .replace(/<td>([^<]*✓[^<]*)<\/td>/g, '<td class="td-eligible">$1</td>')
     .replace(/<td>([^<]*⚠[^<]*)<\/td>/g, '<td class="td-conditional">$1</td>')
@@ -475,7 +459,6 @@ function Spinner({ label = "Retrieving from knowledge base…" }) {
 function InternalMode() {
   const [tab, setTab] = useState("chat");
 
-  // ── Shared Student Profile (Section 7 Step 1) ──────────────────────────────
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const BLANK_PROFILE = {
@@ -522,7 +505,6 @@ function InternalMode() {
 
   const handleKeyDown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
 
-  // Profile string helper for embedding into queries
   const profileStr = () => {
     const parts = [];
     if (profile.nationality) parts.push(profile.nationality + " student");
@@ -535,7 +517,7 @@ function InternalMode() {
     return parts.length ? "Student profile: " + parts.join(", ") + "." : "";
   };
 
-  // ── Find Options Tab (Section 1 Workflow 1 + Section 3 All Filters) ────────
+  // ── Find Options Tab ────────────────────────────────────────────────────────
   const BLANK_FILTERS = { field: "", level: "", feeRange: "", intake: "", delivery: "", scholarship: false, postStudy: false, eligStatus: "All results" };
   const [filters, setFilters]     = useState(BLANK_FILTERS);
   const setF = (k, v)             => setFilters(f => ({ ...f, [k]: v }));
@@ -560,8 +542,9 @@ function InternalMode() {
       p,
       eligFilter,
       "Call Retrieve_Fees, Retrieve_Prospectus, and Retrieve_Application_Forms.",
-      "Return a ranked table with: Programme, University, Annual Fee (USD), Duration, Next Intake, Application Deadline, Entry Requirements, Eligibility Status (✓/⚠/✗), Scholarship (name + amount), Post-Study Work Permit.",
-      "Below the table add a Counselor Note: best fit and any urgent deadlines.",
+      "Return a ranked table with: Programme, University, Annual Fee (USD), Duration, Entry Requirements, Eligibility Status (✓/⚠/✗), Scholarship (name + amount if available in source).",
+      "Only include data that appears explicitly in the retrieved documents. For any field not in the source, output 'Not available'.",
+      "Below the table add a Counselor Note: best fit and any urgent deadlines found in the documents.",
     ].filter(Boolean).join(" ");
     try {
       const r = await callWebhook(q, "internal");
@@ -580,7 +563,7 @@ function InternalMode() {
     if (ok) { setCopySuccess(true); setTimeout(() => setCopySuccess(false), 2500); }
   };
 
-  // ── Eligibility Check Tab (Section 1 Workflow 2 + Section 4 All Checks) ────
+  // ── Eligibility Check Tab ────────────────────────────────────────────────────
   const [eligTarget, setEligTarget]   = useState({ course: "", university: "" });
   const [eligResult, setEligResult]   = useState(null);
   const [eligRaw, setEligRaw]         = useState("");
@@ -609,6 +592,7 @@ function InternalMode() {
       "(g) Post-study work permit — is this available for this programme/university?",
       "For every ✗ or ⚠ check give a plain-language explanation of the gap and exactly what the student would need to do.",
       "If the student is NOT eligible for the requested course, list all alternative programmes at our partner universities they DO qualify for, with university name and entry requirement met.",
+      "Only state information that appears in the retrieved documents. Do not guess intake dates, fees, or other data not returned by the tools.",
     ].filter(Boolean).join(" ");
     try {
       const r = await callWebhook(q, "internal");
@@ -617,7 +601,7 @@ function InternalMode() {
     finally { setEligLoading(false); }
   };
 
-  // ── Compare Tab (Section 1 Workflow 3 + Section 5 All 13 Fields) ───────────
+  // ── Compare Tab ──────────────────────────────────────────────────────────────
   const [compItems, setCompItems]     = useState([]);
   const [compUni, setCompUni]         = useState("");
   const [compProg, setCompProg]       = useState("");
@@ -634,6 +618,9 @@ function InternalMode() {
     }
   };
 
+  // FIX: Removed QS ranking, estimated living cost, total year 1 cost, application deadline
+  // — none of these fields are in the RAG knowledge base and caused hallucinations.
+  // Only fields sourced from Retrieve_Fees / Retrieve_Prospectus / Retrieve_Application_Forms.
   const runCompare = async () => {
     setCompLoading(true); setCompResult(null); setCompRaw("");
     const p = profileStr();
@@ -641,15 +628,16 @@ function InternalMode() {
       `Compare ${compItems.join(" vs ")} side by side`,
       p ? `for a student with the following profile: ${p}` : "",
       ".",
-      "Call Retrieve_Fees, Retrieve_Prospectus, and Retrieve_Application_Forms for each programme.",
-      "Return a comparison table with EXACTLY these rows (Section 5 format):",
-      "Annual Tuition (USD) | Estimated Living Cost (USD/yr) | Total Year 1 Cost |",
-      "Scholarship Available (Yes/No + name) | Scholarship Amount (USD) | Net Cost After Scholarship |",
-      "Next Available Intake | Application Deadline | Programme Duration |",
+      "Call Retrieve_Fees, Retrieve_Prospectus, and Retrieve_Application_Forms for EACH programme before building the table.",
+      "Return a comparison table using ONLY data returned by those tools. Include these rows:",
+      "Annual Tuition (USD) | Total Programme Fees (USD) |",
+      "Scholarship Available (Yes/No + name if in source) | Scholarship Amount (USD if stated) | Net Cost After Scholarship |",
+      "Programme Duration | Entry Requirements |",
       p ? "Eligibility Status (✓ Eligible / ⚠ Conditional / ✗ Not Eligible for this student) |" : "Eligibility Status |",
-      "Missing Requirements | Post-Study Work Permit (Yes/No) | QS University Ranking.",
-      "Highlight the lowest-cost option clearly. Flag any option where the student is not eligible.",
-      "End with a one-line Counselor Recommendation.",
+      "Missing Requirements | Post-Study Work Permit (Yes/No if stated in source).",
+      "CRITICAL: For any field not explicitly present in the retrieved documents, output 'Not available in source'. Do NOT guess, estimate, or use outside knowledge for fees, rankings, living costs, intake dates, or deadlines.",
+      "Highlight the lowest-cost option clearly.",
+      "End with a one-line Counselor Recommendation based only on sourced data.",
     ].filter(Boolean).join(" ");
     try {
       const r = await callWebhook(q, "internal");
@@ -663,7 +651,6 @@ function InternalMode() {
   return (
     <div className="internal-wrapper">
 
-      {/* ── Sidebar overlay (mobile) ── */}
       <div className={`sidebar-overlay ${sidebarOpen ? "open" : ""}`} onClick={() => setSidebarOpen(false)} />
 
       {/* ══ Student Profile Sidebar ══ */}
@@ -756,7 +743,6 @@ function InternalMode() {
       {/* ══ Main Content Area ══════════════════════════════════════════════════ */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
 
-        {/* Mobile top bar — profile pill + sidebar toggle */}
         <div className="mobile-topbar">
           <div className="mobile-profile-summary-pill">
             {(profile.nationality || profile.examSystem)
@@ -785,9 +771,7 @@ function InternalMode() {
 
         <div className="main-panel">
 
-          {/* ══════════════════════════════════════════════════════════════════
-              CHAT TAB — Knowledge Agent + 5 Section 6 Quick-Start Prompts
-          ══════════════════════════════════════════════════════════════════ */}
+          {/* ══ CHAT TAB ══════════════════════════════════════════════════════ */}
           {tab === "chat" && (
             <>
               <div className="chat-area">
@@ -801,35 +785,36 @@ function InternalMode() {
                     </div>
 
                     <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--text-muted)", marginBottom: 10 }}>
-                      Section 6 — Prompt Templates
+                      Quick-Start Prompts
                     </div>
 
                     {[
                       {
                         icon: "🔍", label: "Find Options",
                         prompt: hasProfile
-                          ? `Show me all programmes in Malaysia for a ${profile.nationality || "Kenyan"} student with ${profile.examSystem} ${profile.overallGrade}${profile.ielts ? " IELTS " + profile.ielts : ""}. Call Retrieve_Fees, Retrieve_Prospectus, and Retrieve_Application_Forms. Return a ranked table with programme, university, annual fee, duration, next intake, entry requirements, and eligibility status.`
-                          : `Show me all Business programmes in Malaysia within a USD 10,000–20,000/year budget with a September intake for a student with KCSE B+ and IELTS 5.5. Return a ranked table with programme, university, annual fee, duration, next intake, entry requirements, and eligibility status (✓/⚠/✗).`,
+                          ? `Show me all programmes in Malaysia for a ${profile.nationality || "Kenyan"} student with ${profile.examSystem} ${profile.overallGrade}${profile.ielts ? " IELTS " + profile.ielts : ""}. Call Retrieve_Fees, Retrieve_Prospectus, and Retrieve_Application_Forms. Return a ranked table with programme, university, annual fee, duration, entry requirements, and eligibility status. Only include data from the retrieved documents — output 'Not available' for any field not in the source.`
+                          : `Show me all Business programmes in Malaysia within a USD 10,000–20,000/year budget for a student with KCSE B+ and IELTS 5.5. Call Retrieve_Fees and Retrieve_Prospectus. Return a ranked table with programme, university, annual fee, duration, entry requirements, and eligibility status (✓/⚠/✗). Only include data from retrieved documents.`,
                       },
                       {
                         icon: "✅", label: "Eligibility Check",
                         prompt: hasProfile
-                          ? `Does a ${profile.nationality || "Kenyan"} student with ${profile.examSystem} ${profile.overallGrade}${profile.ielts ? " IELTS " + profile.ielts : ""} qualify for Computer Science? Run Calculate_Eligibility first, then Retrieve_Prospectus. List every requirement as ✓ Eligible, ⚠ Conditional, or ✗ Not Eligible with plain-language explanation for each failed check. Also check: intake availability, visa eligibility, and post-study work permit availability. If not eligible, list all alternatives at partner universities.`
-                          : `Does a Kenyan student with KCSE B+ and IELTS 5.5 qualify for Computer Science at APU? Run Calculate_Eligibility first. Check: grade requirement, subject prerequisites, IELTS requirement, intake availability, visa eligibility, and post-study work permit. Mark each ✓/⚠/✗ with plain-language explanation for any failures.`,
+                          ? `Does a ${profile.nationality || "Kenyan"} student with ${profile.examSystem} ${profile.overallGrade}${profile.ielts ? " IELTS " + profile.ielts : ""} qualify for Computer Science? Run Calculate_Eligibility first, then Retrieve_Prospectus. List every requirement as ✓ Eligible, ⚠ Conditional, or ✗ Not Eligible with plain-language explanation for each failed check. Also check: intake availability, visa eligibility, and post-study work permit — only report these if found in retrieved documents. If not eligible, list sourced alternatives at partner universities.`
+                          : `Does a Kenyan student with KCSE B+ and IELTS 5.5 qualify for Computer Science at APU? Run Calculate_Eligibility first. Check: grade requirement, subject prerequisites, IELTS requirement. Mark each ✓/⚠/✗ with plain-language explanation for any failures. Only use data from retrieved documents.`,
                       },
                       {
                         icon: "⚖️", label: "Compare Options",
-                        prompt: `Compare APU Computer Science vs SEGi Computer Science vs Taylor's Computer Science side by side${hasProfile ? " for a student with " + profile.examSystem + " " + profile.overallGrade + (profile.ielts ? " IELTS " + profile.ielts : "") : ""}. Call Retrieve_Fees, Retrieve_Prospectus, and Retrieve_Application_Forms for each. Show all 13 fields: annual tuition (USD), estimated living cost, total Year 1 cost, scholarship (name + amount), net cost after scholarship, next intake, application deadline, duration, eligibility status, missing requirements, post-study work permit, QS ranking. Highlight lowest cost. End with a Counselor Recommendation.`,
+                        // FIX: Removed QS ranking, living costs, total year 1 cost from compare prompt
+                        prompt: `Compare APU Computer Science vs SEGi Computer Science vs Taylor's Computer Science side by side${hasProfile ? " for a student with " + profile.examSystem + " " + profile.overallGrade + (profile.ielts ? " IELTS " + profile.ielts : "") : ""}. Call Retrieve_Fees, Retrieve_Prospectus, and Retrieve_Application_Forms for each. Show: annual tuition (USD), total programme fees, scholarship (name + amount if in source), net cost after scholarship, programme duration, entry requirements, eligibility status, missing requirements, post-study work permit. IMPORTANT: For any field not in the retrieved documents, output 'Not available in source' — do not guess. Highlight lowest cost. End with a Counselor Recommendation.`,
                       },
                       {
                         icon: "🎓", label: "Find Scholarships",
                         prompt: hasProfile
-                          ? `Which programmes in Malaysia offer partial or full scholarships for a ${profile.nationality || "Kenyan"} student with ${profile.examSystem} ${profile.overallGrade}${profile.ielts ? " IELTS " + profile.ielts : ""}? Call Retrieve_Fees. Show: programme, university, scholarship name, value (USD or % of tuition), eligibility conditions, and whether this student qualifies. Rank by scholarship value.`
-                          : `Which Business and IT programmes in Malaysia offer partial or full scholarships for a student with KCSE B+ and IELTS 5.5? Show scholarship name, value, and eligibility conditions.`,
+                          ? `Which programmes in Malaysia offer partial or full scholarships for a ${profile.nationality || "Kenyan"} student with ${profile.examSystem} ${profile.overallGrade}${profile.ielts ? " IELTS " + profile.ielts : ""}? Call Retrieve_Fees. Show: programme, university, scholarship name, value (USD or % of tuition if stated in source), eligibility conditions. Only include scholarships explicitly mentioned in the retrieved documents.`
+                          : `Which Business and IT programmes in Malaysia offer partial or full scholarships for a student with KCSE B+ and IELTS 5.5? Call Retrieve_Fees. Show scholarship name, value, and eligibility conditions from the retrieved documents only.`,
                       },
                       {
                         icon: "📋", label: "Gap Plan",
-                        prompt: `The student does not currently meet the English/IELTS requirement for their chosen programme. Call Retrieve_Application_Forms. What pre-sessional English options are available at our partner universities, and what IELTS band would the student need to achieve after completion to meet the standard entry requirement?`,
+                        prompt: `The student does not currently meet the English/IELTS requirement for their chosen programme. Call Retrieve_Application_Forms. What pre-sessional English options are available at our partner universities, and what IELTS band would the student need to achieve after completion to meet the standard entry requirement? Only report what is found in the retrieved documents.`,
                       },
                     ].map(({ icon, label, prompt }) => (
                       <button key={label} onClick={() => sendMessage(prompt)}
@@ -885,9 +870,7 @@ function InternalMode() {
             </>
           )}
 
-          {/* ══════════════════════════════════════════════════════════════════
-              FIND OPTIONS TAB — Section 1 Workflow 1 + Section 3 ALL Filters
-          ══════════════════════════════════════════════════════════════════ */}
+          {/* ══ FIND OPTIONS TAB ══════════════════════════════════════════════ */}
           {tab === "find" && (
             <div className="workflow-panel">
               <div className="workflow-title">🔍 Find Matching Programmes</div>
@@ -930,7 +913,7 @@ function InternalMode() {
                   </select>
                 </div>
                 <div className="ff">
-                  <label>Eligibility Status (Section 3)</label>
+                  <label>Eligibility Status</label>
                   <select value={filters.eligStatus} onChange={e => setF("eligStatus", e.target.value)}>
                     {ELIG_STATUS.map(s => <option key={s}>{s}</option>)}
                   </select>
@@ -978,14 +961,12 @@ function InternalMode() {
             </div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════════════
-              ELIGIBILITY CHECK TAB — Section 1 Workflow 2 + Section 4 All 7 Checks
-          ══════════════════════════════════════════════════════════════════ */}
+          {/* ══ ELIGIBILITY CHECK TAB ═════════════════════════════════════════ */}
           {tab === "eligibility" && (
             <div className="workflow-panel">
               <div className="workflow-title">✅ Eligibility Check</div>
               <div className="workflow-sub">
-                Checks all 7 criteria from Section 4: grade, subject prerequisites, IELTS, work experience, intake availability, nationality/visa, and post-study work permit.
+                Checks all 7 criteria: grade, subject prerequisites, IELTS, work experience, intake availability, nationality/visa, and post-study work permit.
               </div>
 
               {!hasProfile && (
@@ -1045,17 +1026,14 @@ function InternalMode() {
             </div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════════════
-              COMPARE TAB — Section 1 Workflow 3 + Section 5 All 13 Fields
-          ══════════════════════════════════════════════════════════════════ */}
+          {/* ══ COMPARE TAB ═══════════════════════════════════════════════════ */}
           {tab === "compare" && (
             <div className="workflow-panel">
               <div className="workflow-title">⚖️ Compare Programmes</div>
               <div className="workflow-sub">
-                Add 2–3 programmes (e.g. "APU Computer Science"). All 13 Section 5 fields shown side by side. Eligibility cells auto-highlighted ✓/⚠/✗. Lowest-cost option flagged.
+                Add 2–3 programmes. Comparison table built from retrieved documents only — fees, duration, entry requirements, eligibility, scholarships. Eligibility cells auto-highlighted ✓/⚠/✗.
               </div>
 
-              {/* Dropdowns: University + Programme (all 40 options) */}
               <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap", alignItems: "flex-end" }}>
                 <div className="ff" style={{ flex: "1 1 180px", minWidth: 150 }}>
                   <label>University</label>
