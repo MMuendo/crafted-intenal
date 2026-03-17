@@ -1,6 +1,4 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import Confetti from "react-confetti";
-import { supabase } from "./supabaseClient";
 
 const WEBHOOK_URL = "https://thecraftcatalyst.app.n8n.cloud/webhook/f0c78673-a678-4632-ae82-a9e53180e271";
 
@@ -190,23 +188,114 @@ const css = `
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   @keyframes typingDot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.35; } 30% { transform: translateY(-5px); opacity: 1; } }
 
+  /* ── Sidebar toggle button (mobile only, hidden on desktop) ── */
+  .sidebar-toggle-btn {
+    display: none;
+    align-items: center; gap: 8px;
+    background: var(--neutral); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+    font-family: "Montserrat", sans-serif; color: var(--text); flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .sidebar-toggle-btn:hover { background: var(--neutral-dark); }
+  .sidebar-toggle-btn .badge {
+    background: var(--accent); color: var(--primary); border-radius: 10px;
+    padding: 1px 7px; font-size: 10px; font-weight: 800;
+  }
+
+  /* ── Mobile bar above tabs (shown only on mobile) ── */
+  .mobile-topbar {
+    display: none; align-items: center; justify-content: space-between;
+    padding: 8px 12px; background: var(--neutral); border-bottom: 1px solid var(--border);
+    flex-shrink: 0; gap: 10px;
+  }
+  .mobile-profile-summary-pill {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 20px;
+    padding: 5px 12px; font-size: 11px; font-weight: 600; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;
+  }
+
+  /* ── Mobile sidebar drawer overlay ── */
+  .sidebar-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    z-index: 200; cursor: pointer;
+  }
+  .sidebar-overlay.open { display: block; }
+  .profile-sidebar.mobile-open {
+    position: fixed; top: 0; left: 0; height: 100vh; width: 280px; max-width: 85vw;
+    z-index: 201; box-shadow: 4px 0 24px rgba(0,0,0,0.18);
+    overflow-y: auto; border-right: 1px solid var(--border);
+  }
+  .sidebar-close-btn {
+    display: none; align-self: flex-end; background: none; border: none;
+    font-size: 20px; cursor: pointer; color: var(--text-muted); padding: 2px 4px; line-height: 1;
+  }
+
   /* ── Mobile ── */
   @media (max-width: 768px) {
-    .header { padding: 0 16px; }
-    .internal-wrapper { flex-direction: column; height: auto; min-height: calc(100vh - 64px); overflow: visible; }
-    .profile-sidebar { width: 100%; min-width: 0; flex-direction: row; flex-wrap: wrap; gap: 8px; padding: 10px; border-right: none; border-bottom: 1px solid var(--border); }
-    .sidebar-hdr { width: 100%; }
-    .pf { min-width: 120px; }
-    .int-tab-bar { overflow-x: auto; flex-wrap: nowrap; }
-    .main-panel { margin: 0 6px 6px; }
-    .chat-area { padding: 14px; max-height: calc(100vh - 260px); }
-    .workflow-panel { padding: 14px; }
-    .filter-grid { grid-template-columns: 1fr 1fr; }
-    .filter-grid-2 { grid-template-columns: 1fr; }
-    .msg { max-width: 96%; }
+    .header { padding: 0 14px; }
+    .header-subtitle { display: none; }
+
+    /* Layout: stack, full height, scroll naturally */
+    .internal-wrapper {
+      flex-direction: column; height: auto;
+      min-height: calc(100vh - 64px); overflow: visible;
+    }
+
+    /* Sidebar: hidden by default, shown as drawer */
+    .profile-sidebar {
+      display: none; flex-direction: column; width: 280px;
+      padding: 14px; gap: 8px;
+    }
+    .profile-sidebar.mobile-open { display: flex; }
+    .sidebar-toggle-btn { display: flex; }
+    .mobile-topbar { display: flex; }
+    .sidebar-close-btn { display: block; }
+
+    /* Main content takes full width */
+    .int-tab-bar {
+      overflow-x: auto; flex-wrap: nowrap;
+      padding: 8px 8px 0; gap: 2px;
+    }
+    .int-tab { padding: 7px 11px; font-size: 11px; }
+    .main-panel { margin: 0 6px 10px; border-radius: 0 10px 10px 10px; }
+
+    /* Chat */
+    .chat-area { padding: 14px 12px; max-height: calc(100vh - 220px); gap: 14px; }
+    .msg { max-width: 94%; }
+    .msg-bubble { padding: 10px 13px; font-size: 13px; }
     .input-bar { padding: 10px 12px; }
-    .bubble-ai table { font-size: 11px; }
-    .bubble-ai th, .bubble-ai td, .results-box td, .results-box th { padding: 6px 8px; }
+    .input-box { font-size: 14px; padding: 10px 13px; }
+    .send-btn { width: 42px; height: 42px; font-size: 17px; }
+
+    /* Workflow panels */
+    .workflow-panel { padding: 14px 12px; }
+    .workflow-title { font-size: 15px; }
+    .filter-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .filter-grid-2 { grid-template-columns: 1fr; }
+    .filter-actions { gap: 8px; }
+    .btn-primary, .btn-secondary { padding: 11px 16px; font-size: 13px; }
+
+    /* Tables — horizontal scroll */
+    .results-box { padding: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .results-box table { min-width: 540px; }
+    .results-box th, .results-box td { padding: 7px 9px; font-size: 12px; }
+    .bubble-ai table { min-width: 400px; overflow-x: auto; display: block; }
+    .bubble-ai th, .bubble-ai td { padding: 6px 8px; font-size: 11px; }
+
+    /* Subj rows in sidebar drawer */
+    .subj-row span { font-size: 11px; }
+    .subj-row select { width: 64px; }
+
+    /* Export bar */
+    .export-bar { gap: 7px; }
+    .export-bar .btn-secondary { padding: 8px 12px; font-size: 11px; }
+  }
+
+  @media (max-width: 400px) {
+    .filter-grid { grid-template-columns: 1fr; }
+    .int-tab span.tab-label { display: none; }
+    .int-tab { padding: 8px 10px; font-size: 15px; }
   }
 
   /* ── Print ── */
@@ -260,6 +349,20 @@ const INTAKES        = ["January","May","September","Rolling"];
 const IELTS_BANDS    = ["5.0","5.5","6.0","6.5","7.0","7.5+"];
 const WORK_EXP       = ["0 years","1–2 years","3–5 years","5+ years"];
 const UNIVERSITIES   = ["APU","SEGi","Sunway","Taylor's","INTI","MSU","University of Cyberjaya","Quest International University"];
+
+// Flat list of all programmes for compare dropdown (all ~40 options, grouped by category)
+const ALL_PROGRAMMES = Object.entries({
+  "Medicine & Health Sciences":         ["Medicine (MBBS)", "Pharmacy", "Nursing", "Physiotherapy", "Biomedical Sciences"],
+  "Business, Management & Marketing":   ["Business Administration", "Marketing", "Digital Marketing", "International Business", "Finance", "Accounting", "HR Management"],
+  "Computing & Technology":             ["Computer Science", "Software Engineering", "Cybersecurity", "Data Science", "Artificial Intelligence", "IT Management", "Cloud Engineering"],
+  "Engineering":                        ["Mechanical Engineering", "Civil Engineering", "Electrical Engineering", "Chemical Engineering", "Mechatronics", "Biomedical Engineering"],
+  "Architecture & Design":              ["Architecture", "Interior Design", "Graphic Design", "Animation & VFX", "Fashion Design"],
+  "Hospitality & Tourism":              ["Hospitality Management", "Culinary Arts", "Hotel Management", "Tourism Management"],
+  "Law":                                ["LLB Law"],
+  "Social Sciences & Psychology":       ["Psychology", "Social Sciences", "Education", "Special Needs Education"],
+  "Pre-University":                     ["Foundation in Science", "Foundation in Computing", "Foundation in Business", "Foundation in Arts", "A-Levels"],
+  "Postgraduate":                       ["MBA", "MSc Computer Science", "MSc Data Science", "MA Communication", "MSc Engineering"],
+});
 const DELIVERY_MODES = ["On-campus","Online","Hybrid"];
 const ELIG_STATUS    = ["All results","Eligible only (✓)","Conditional (⚠)","Not eligible (✗)"];
 
@@ -373,6 +476,8 @@ function InternalMode() {
   const [tab, setTab] = useState("chat");
 
   // ── Shared Student Profile (Section 7 Step 1) ──────────────────────────────
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const BLANK_PROFILE = {
     nationality: "", examSystem: "", overallGrade: "",
     subjects: { English: "", Mathematics: "", Biology: "", Chemistry: "", Physics: "" },
@@ -514,14 +619,18 @@ function InternalMode() {
 
   // ── Compare Tab (Section 1 Workflow 3 + Section 5 All 13 Fields) ───────────
   const [compItems, setCompItems]     = useState([]);
-  const [compInput, setCompInput]     = useState("");
+  const [compUni, setCompUni]         = useState("");
+  const [compProg, setCompProg]       = useState("");
   const [compResult, setCompResult]   = useState(null);
   const [compRaw, setCompRaw]         = useState("");
   const [compLoading, setCompLoading] = useState(false);
 
   const addComp = () => {
-    if (compInput.trim() && !compItems.includes(compInput.trim()) && compItems.length < 3) {
-      setCompItems(c => [...c, compInput.trim()]); setCompInput("");
+    if (!compUni || !compProg) return;
+    const label = compUni + " — " + compProg;
+    if (!compItems.includes(label) && compItems.length < 3) {
+      setCompItems(prev => [...prev, label]);
+      setCompUni(""); setCompProg("");
     }
   };
 
@@ -554,11 +663,17 @@ function InternalMode() {
   return (
     <div className="internal-wrapper">
 
-      {/* ══ Student Profile Sidebar (Section 7 Step 1 + Section 3 Inputs) ══ */}
-      <div className="profile-sidebar">
+      {/* ── Sidebar overlay (mobile) ── */}
+      <div className={`sidebar-overlay ${sidebarOpen ? "open" : ""}`} onClick={() => setSidebarOpen(false)} />
+
+      {/* ══ Student Profile Sidebar ══ */}
+      <div className={`profile-sidebar ${sidebarOpen ? "mobile-open" : ""}`}>
         <div className="sidebar-hdr">
           <span>Student Profile</span>
-          <button onClick={clearProfile}>Clear</button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={clearProfile}>Clear</button>
+            <button className="sidebar-close-btn" onClick={() => setSidebarOpen(false)}>×</button>
+          </div>
         </div>
 
         <div className="pf">
@@ -641,16 +756,29 @@ function InternalMode() {
       {/* ══ Main Content Area ══════════════════════════════════════════════════ */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
 
+        {/* Mobile top bar — profile pill + sidebar toggle */}
+        <div className="mobile-topbar">
+          <div className="mobile-profile-summary-pill">
+            {(profile.nationality || profile.examSystem)
+              ? [profile.nationality, profile.examSystem && profile.overallGrade ? profile.examSystem + " " + profile.overallGrade : ""].filter(Boolean).join(" · ") || "Student Profile"
+              : "No profile loaded"}
+          </div>
+          <button className="sidebar-toggle-btn" onClick={() => setSidebarOpen(true)}>
+            👤 Profile
+            {(profile.examSystem || profile.nationality) && <span className="badge">✓</span>}
+          </button>
+        </div>
+
         {/* Tab Bar */}
         <div className="int-tab-bar">
           {[
-            { id: "chat",        icon: "💬", label: "Knowledge Agent"   },
-            { id: "find",        icon: "🔍", label: "Find Options"      },
-            { id: "eligibility", icon: "✅", label: "Eligibility Check"  },
-            { id: "compare",     icon: "⚖️",  label: "Compare"           },
+            { id: "chat",        icon: "💬", label: "Agent"    },
+            { id: "find",        icon: "🔍", label: "Find"     },
+            { id: "eligibility", icon: "✅", label: "Eligibility" },
+            { id: "compare",     icon: "⚖️",  label: "Compare"  },
           ].map(t => (
             <button key={t.id} className={`int-tab ${tab === t.id ? "active" : ""}`} onClick={() => setTab(t.id)}>
-              {t.icon} {t.label}
+              <span>{t.icon}</span> <span className="tab-label">{t.label}</span>
             </button>
           ))}
         </div>
@@ -927,15 +1055,37 @@ function InternalMode() {
                 Add 2–3 programmes (e.g. "APU Computer Science"). All 13 Section 5 fields shown side by side. Eligibility cells auto-highlighted ✓/⚠/✗. Lowest-cost option flagged.
               </div>
 
-              <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-                <input value={compInput} onChange={e => setCompInput(e.target.value)}
-                  placeholder="e.g. APU Computer Science"
-                  onKeyDown={e => e.key === "Enter" && addComp()}
-                  className="input-box" style={{ flex: 1, maxWidth: 380 }} />
-                <button className="btn-secondary" onClick={addComp} disabled={!compInput.trim() || compItems.length >= 3}>
+              {/* Dropdowns: University + Programme (all 40 options) */}
+              <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap", alignItems: "flex-end" }}>
+                <div className="ff" style={{ flex: "1 1 180px", minWidth: 150 }}>
+                  <label>University</label>
+                  <select value={compUni} onChange={e => setCompUni(e.target.value)}>
+                    <option value="">Select university…</option>
+                    {UNIVERSITIES.map(u => <option key={u}>{u}</option>)}
+                  </select>
+                </div>
+                <div className="ff" style={{ flex: "2 1 220px", minWidth: 180 }}>
+                  <label>Programme</label>
+                  <select value={compProg} onChange={e => setCompProg(e.target.value)}>
+                    <option value="">Select programme…</option>
+                    {ALL_PROGRAMMES.map(([cat, progs]) => (
+                      <optgroup key={cat} label={cat}>
+                        {progs.map(p => <option key={p} value={p}>{p}</option>)}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  className="btn-secondary"
+                  onClick={addComp}
+                  disabled={!compUni || !compProg || compItems.length >= 3}
+                  style={{ flex: "0 0 auto", alignSelf: "flex-end" }}>
                   + Add
                 </button>
               </div>
+              {compItems.length >= 3 && (
+                <div className="info-box" style={{ marginBottom: 12 }}>Maximum 3 programmes reached. Remove one before adding another.</div>
+              )}
 
               {compItems.length > 0 && (
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
@@ -951,7 +1101,7 @@ function InternalMode() {
 
               {compItems.length < 2 && (
                 <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 14 }}>
-                  Add at least 2 programmes to compare (max 3).
+                  Select a university and programme, then click + Add. Add at least 2 to compare (max 3).
                 </div>
               )}
 
@@ -959,7 +1109,7 @@ function InternalMode() {
                 <button className="btn-primary" style={{ maxWidth: 230 }} disabled={compItems.length < 2 || compLoading} onClick={runCompare}>
                   {compLoading ? "Generating comparison…" : "Generate Comparison →"}
                 </button>
-                <button className="btn-secondary" style={{ maxWidth: 90 }} onClick={() => { setCompItems([]); setCompResult(null); setCompInput(""); }}>
+                <button className="btn-secondary" style={{ maxWidth: 90 }} onClick={() => { setCompItems([]); setCompResult(null); setCompUni(""); setCompProg(""); }}>
                   Clear All
                 </button>
               </div>
