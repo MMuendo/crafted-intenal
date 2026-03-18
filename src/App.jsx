@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import Confetti from "react-confetti";
+import { supabase } from "./supabaseClient";
 
 const WEBHOOK_URL = "https://thecraftcatalyst.app.n8n.cloud/webhook/f0c78673-a678-4632-ae82-a9e53180e271";
 
@@ -96,21 +98,48 @@ const css = `
   .profile-summary strong { color: var(--text); }
   .sidebar-divider { height: 1px; background: var(--border); margin: 4px 0; }
 
-  /* ── Tab Bar ── */
-  .int-tab-bar { display: flex; gap: 3px; padding: 10px 12px 0; background: var(--neutral); flex-shrink: 0; }
-  .int-tab {
-    padding: 8px 14px; border-radius: 8px 8px 0 0; border: 1px solid var(--border); border-bottom: none;
-    background: var(--neutral-dark); color: var(--text-muted); font-family: "Montserrat", sans-serif;
-    font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  /* ── Tab Bar (Vertical on Right) ── */
+  .int-tab-bar { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 8px; 
+    padding: 16px; 
+    background: var(--bg); 
+    border-left: 1px solid var(--border);
+    width: 200px;
+    min-width: 200px;
+    flex-shrink: 0; 
   }
-  .int-tab:hover { background: var(--bg); color: var(--text); }
-  .int-tab.active { background: var(--bg); color: var(--primary); border-bottom: 1px solid var(--bg); margin-bottom: -1px; }
+  .int-tab {
+    padding: 12px 16px; 
+    border-radius: 10px; 
+    border: 1px solid var(--border);
+    background: var(--neutral-dark); 
+    color: var(--text-muted); 
+    font-family: "Montserrat", sans-serif;
+    font-size: 13px; 
+    font-weight: 600; 
+    cursor: pointer; 
+    transition: all 0.15s; 
+    white-space: nowrap;
+    text-align: left;
+    width: 100%;
+  }
+  .int-tab:hover { background: var(--neutral); color: var(--text); }
+  .int-tab.active { background: var(--accent); color: var(--primary); border-color: var(--accent); }
 
   /* ── Main Panel ── */
   .main-panel {
-    flex: 1; display: flex; flex-direction: column; background: var(--bg);
-    margin: 0 12px 12px; border-radius: 0 12px 12px 12px;
-    box-shadow: var(--shadow-sm); overflow: hidden; border: 1px solid var(--border);
+    flex: 1; 
+    display: flex; 
+    flex-direction: column; 
+    background: var(--bg);
+    border-radius: 12px 0 0 12px;
+    box-shadow: var(--shadow-sm); 
+    overflow: hidden; 
+    border: 1px solid var(--border);
+    border-right: none;
+    margin: 12px 0 12px 12px;
   }
 
   /* ── Chat ── */
@@ -242,23 +271,32 @@ const css = `
       min-height: calc(100vh - 64px); overflow: visible;
     }
 
-    /* Sidebar: hidden by default, shown as drawer */
-    .profile-sidebar {
-      display: none; flex-direction: column; width: 280px;
-      padding: 14px; gap: 8px;
-    }
-    .profile-sidebar.mobile-open { display: flex; }
-    .sidebar-toggle-btn { display: flex; }
-    .mobile-topbar { display: flex; }
-    .sidebar-close-btn { display: block; }
-
-    /* Main content takes full width */
+    /* Vertical tabs become horizontal on mobile */
     .int-tab-bar {
-      overflow-x: auto; flex-wrap: nowrap;
-      padding: 8px 8px 0; gap: 2px;
+      flex-direction: row;
+      overflow-x: auto; 
+      flex-wrap: nowrap;
+      padding: 8px; 
+      gap: 4px;
+      width: 100%;
+      border-left: none;
+      border-top: 1px solid var(--border);
+      order: 2;
     }
-    .int-tab { padding: 7px 11px; font-size: 11px; }
-    .main-panel { margin: 0 6px 10px; border-radius: 0 10px 10px 10px; }
+    .int-tab { 
+      padding: 8px 12px; 
+      font-size: 11px; 
+      min-width: 80px;
+      text-align: center;
+    }
+    
+    /* Main content */
+    .main-panel { 
+      margin: 0; 
+      border-radius: 0; 
+      border: none;
+      order: 1;
+    }
 
     /* Chat */
     .chat-area { padding: 14px 12px; max-height: calc(100vh - 220px); gap: 14px; }
@@ -284,23 +322,19 @@ const css = `
     .bubble-ai th, .bubble-ai td { padding: 6px 8px; font-size: 11px; }
 
     /* Subj rows in sidebar drawer */
-    .subj-row span { font-size: 11px; }
-    .subj-row select { width: 64px; }
-
-    /* Export bar */
-    .export-bar { gap: 7px; }
-    .export-bar .btn-secondary { padding: 8px 12px; font-size: 11px; }
+    .filter-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .filter-grid-2 { grid-template-columns: 1fr; }
   }
 
   @media (max-width: 400px) {
     .filter-grid { grid-template-columns: 1fr; }
-    .int-tab span.tab-label { display: none; }
-    .int-tab { padding: 8px 10px; font-size: 15px; }
+    .int-tab .tab-label { font-size: 10px; }
+    .int-tab { padding: 6px 8px; min-width: 70px; }
   }
 
   /* ── Print ── */
   @media print {
-    .profile-sidebar, .int-tab-bar, .input-bar, .header, .filter-actions, .export-bar { display: none !important; }
+    .int-tab-bar, .input-bar, .header, .filter-actions, .export-bar { display: none !important; }
     .internal-wrapper { height: auto; overflow: visible; }
     .main-panel { box-shadow: none; border: none; margin: 0; overflow: visible; }
     .workflow-panel { padding: 8px; }
@@ -349,6 +383,71 @@ const INTAKES        = ["January","May","September","Rolling"];
 const IELTS_BANDS    = ["5.0","5.5","6.0","6.5","7.0","7.5+"];
 const WORK_EXP       = ["0 years","1–2 years","3–5 years","5+ years"];
 const UNIVERSITIES   = ["APU","SEGi","Sunway","Taylor's","INTI","MSU","University of Cyberjaya","Quest International University"];
+
+// University-specific programs mapping
+const UNIVERSITY_PROGRAMS = {
+  "APU": {
+    "Computing & Technology": ["Computer Science", "Software Engineering", "Cybersecurity", "Data Science", "Artificial Intelligence", "IT Management"],
+    "Business, Management & Marketing": ["Business Administration", "Marketing", "Digital Marketing", "International Business", "Finance", "Accounting"],
+    "Engineering": ["Mechanical Engineering", "Electrical Engineering", "Mechatronics"],
+    "Architecture & Design": ["Architecture", "Interior Design", "Animation & VFX"],
+    "Postgraduate": ["MBA", "MSc Computer Science", "MSc Data Science"]
+  },
+  "SEGi": {
+    "Medicine & Health Sciences": ["Medicine (MBBS)", "Pharmacy", "Nursing", "Physiotherapy", "Biomedical Sciences"],
+    "Business, Management & Marketing": ["Business Administration", "Marketing", "International Business", "Finance", "Accounting", "HR Management"],
+    "Computing & Technology": ["Computer Science", "Software Engineering", "IT Management"],
+    "Engineering": ["Civil Engineering", "Electrical Engineering", "Chemical Engineering"],
+    "Pre-University": ["Foundation in Science", "Foundation in Computing", "Foundation in Business"],
+    "Postgraduate": ["MBA", "MSc Engineering"]
+  },
+  "Sunway": {
+    "Business, Management & Marketing": ["Business Administration", "Marketing", "Digital Marketing", "International Business", "Finance", "Accounting"],
+    "Computing & Technology": ["Computer Science", "Software Engineering", "Data Science", "Cybersecurity"],
+    "Medicine & Health Sciences": ["Medicine (MBBS)", "Pharmacy", "Nursing"],
+    "Hospitality & Tourism": ["Hospitality Management", "Culinary Arts", "Tourism Management"],
+    "Architecture & Design": ["Architecture", "Interior Design", "Graphic Design"],
+    "Postgraduate": ["MBA", "MA Communication"]
+  },
+  "Taylor's": {
+    "Medicine & Health Sciences": ["Medicine (MBBS)", "Pharmacy", "Biomedical Sciences"],
+    "Business, Management & Marketing": ["Business Administration", "Marketing", "Finance", "Accounting"],
+    "Computing & Technology": ["Computer Science", "Software Engineering", "Data Science"],
+    "Hospitality & Tourism": ["Hospitality Management", "Culinary Arts", "Hotel Management"],
+    "Architecture & Design": ["Architecture", "Interior Design", "Fashion Design"],
+    "Law": ["LLB Law"],
+    "Postgraduate": ["MBA", "MSc Computer Science"]
+  },
+  "INTI": {
+    "Engineering": ["Mechanical Engineering", "Civil Engineering", "Electrical Engineering", "Chemical Engineering"],
+    "Business, Management & Marketing": ["Business Administration", "Marketing", "Finance", "Accounting"],
+    "Computing & Technology": ["Computer Science", "Software Engineering", "IT Management"],
+    "Medicine & Health Sciences": ["Nursing", "Physiotherapy"],
+    "Pre-University": ["Foundation in Science", "Foundation in Computing", "A-Levels"],
+    "Postgraduate": ["MBA"]
+  },
+  "MSU": {
+    "Medicine & Health Sciences": ["Medicine (MBBS)", "Pharmacy", "Nursing", "Biomedical Sciences"],
+    "Business, Management & Marketing": ["Business Administration", "Marketing", "Finance"],
+    "Computing & Technology": ["Computer Science", "IT Management"],
+    "Social Sciences & Psychology": ["Psychology", "Education"],
+    "Postgraduate": ["MBA", "MSc Engineering"]
+  },
+  "University of Cyberjaya": {
+    "Medicine & Health Sciences": ["Medicine (MBBS)", "Pharmacy", "Nursing", "Physiotherapy", "Biomedical Sciences"],
+    "Computing & Technology": ["Computer Science", "Cybersecurity", "Data Science"],
+    "Business, Management & Marketing": ["Business Administration", "Marketing"],
+    "Social Sciences & Psychology": ["Psychology", "Special Needs Education"],
+    "Postgraduate": ["MBA", "MSc Computer Science"]
+  },
+  "Quest International University": {
+    "Medicine & Health Sciences": ["Medicine (MBBS)", "Pharmacy", "Nursing"],
+    "Business, Management & Marketing": ["Business Administration", "International Business"],
+    "Computing & Technology": ["Computer Science", "Software Engineering"],
+    "Social Sciences & Psychology": ["Psychology", "Education"],
+    "Pre-University": ["Foundation in Science", "Foundation in Business"]
+  }
+};
 
 // Flat list of all programmes for compare dropdown (all ~40 options, grouped by category)
 const ALL_PROGRAMMES = Object.entries({
@@ -581,7 +680,7 @@ function InternalMode() {
   };
 
   // ── Eligibility Check Tab (Section 1 Workflow 2 + Section 4 All Checks) ────
-  const [eligTarget, setEligTarget]   = useState({ course: "", university: "" });
+  const [eligTarget, setEligTarget]   = useState({ fieldOfStudy: "", course: "", university: "" });
   const [eligResult, setEligResult]   = useState(null);
   const [eligRaw, setEligRaw]         = useState("");
   const [eligLoading, setEligLoading] = useState(false);
@@ -663,117 +762,8 @@ function InternalMode() {
   return (
     <div className="internal-wrapper">
 
-      {/* ── Sidebar overlay (mobile) ── */}
-      <div className={`sidebar-overlay ${sidebarOpen ? "open" : ""}`} onClick={() => setSidebarOpen(false)} />
-
-      {/* ══ Student Profile Sidebar ══ */}
-      <div className={`profile-sidebar ${sidebarOpen ? "mobile-open" : ""}`}>
-        <div className="sidebar-hdr">
-          <span>Student Profile</span>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={clearProfile}>Clear</button>
-            <button className="sidebar-close-btn" onClick={() => setSidebarOpen(false)}>×</button>
-          </div>
-        </div>
-
-        <div className="pf">
-          <label>Exam System</label>
-          <select value={profile.examSystem} onChange={e => setP("examSystem", e.target.value)}>
-            <option value="">Select…</option>
-            {EXAM_SYSTEMS.map(s => <option key={s}>{s}</option>)}
-          </select>
-        </div>
-
-        <div className="pf">
-          <label>Overall Grade</label>
-          <input
-            placeholder={profile.examSystem ? OVERALL_PLACEHOLDER[profile.examSystem] : "Select exam first"}
-            value={profile.overallGrade}
-            onChange={e => setP("overallGrade", e.target.value)}
-            disabled={!profile.examSystem} />
-        </div>
-
-        {profile.examSystem && (
-          <>
-            <div className="sidebar-divider" />
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)" }}>Subject Grades</div>
-            {Object.keys(profile.subjects).map(sub => (
-              <div className="subj-row" key={sub}>
-                <span>{sub}</span>
-                <select value={profile.subjects[sub]} onChange={e => setSub(sub, e.target.value)}>
-                  <option value="">–</option>
-                  {(GRADE_OPTIONS[profile.examSystem] || GRADE_OPTIONS["KCSE"]).map(g => <option key={g}>{g}</option>)}
-                </select>
-              </div>
-            ))}
-          </>
-        )}
-
-        <div className="sidebar-divider" />
-
-        <div className="pf">
-          <label>IELTS Band</label>
-          <select value={profile.ielts} onChange={e => setP("ielts", e.target.value)}>
-            <option value="">Not taken / N/A</option>
-            {IELTS_BANDS.map(b => <option key={b}>{b}</option>)}
-          </select>
-        </div>
-
-        <div className="pf">
-          <label>Work Experience</label>
-          <select value={profile.workExp} onChange={e => setP("workExp", e.target.value)}>
-            {WORK_EXP.map(w => <option key={w}>{w}</option>)}
-          </select>
-        </div>
-
-        <label className="checkbox-row" style={{ fontSize: 11 }}>
-          <input type="checkbox" checked={profile.postStudy} onChange={e => setP("postStudy", e.target.checked)} />
-          Post-study work priority
-        </label>
-
-        {(profile.nationality || hasProfile) && (
-          <div className="profile-summary">
-            {profile.nationality && <><strong>{profile.nationality}</strong><br /></>}
-            {hasProfile && <><strong>{profile.examSystem}</strong> {profile.overallGrade}<br /></>}
-            {Object.entries(profile.subjects).filter(([,v])=>v).map(([k,v])=>`${k}: ${v}`).join(" · ") && (
-              <span style={{fontSize:10}}>{Object.entries(profile.subjects).filter(([,v])=>v).map(([k,v])=>`${k} ${v}`).join(" · ")}</span>
-            )}
-            {profile.ielts && <><br />IELTS {profile.ielts}</>}
-            {profile.workExp !== "0 years" && <><br />{profile.workExp} exp</>}
-            {profile.postStudy && <><br />📌 Post-study work</>}
-          </div>
-        )}
-      </div>
-
       {/* ══ Main Content Area ══════════════════════════════════════════════════ */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
-
-        {/* Mobile top bar — profile pill + sidebar toggle */}
-        <div className="mobile-topbar">
-          <div className="mobile-profile-summary-pill">
-            {(profile.nationality || profile.examSystem)
-              ? [profile.nationality, profile.examSystem && profile.overallGrade ? profile.examSystem + " " + profile.overallGrade : ""].filter(Boolean).join(" · ") || "Student Profile"
-              : "No profile loaded"}
-          </div>
-          <button className="sidebar-toggle-btn" onClick={() => setSidebarOpen(true)}>
-            👤 Profile
-            {(profile.examSystem || profile.nationality) && <span className="badge">✓</span>}
-          </button>
-        </div>
-
-        {/* Tab Bar */}
-        <div className="int-tab-bar">
-          {[
-            { id: "chat",        icon: "💬", label: "Agent"    },
-            { id: "find",        icon: "🔍", label: "Find"     },
-            { id: "eligibility", icon: "✅", label: "Eligibility" },
-            { id: "compare",     icon: "⚖️",  label: "Compare"  },
-          ].map(t => (
-            <button key={t.id} className={`int-tab ${tab === t.id ? "active" : ""}`} onClick={() => setTab(t.id)}>
-              <span>{t.icon}</span> <span className="tab-label">{t.label}</span>
-            </button>
-          ))}
-        </div>
 
         <div className="main-panel">
 
@@ -787,9 +777,6 @@ function InternalMode() {
                   <div style={{ maxWidth: 720, margin: "0 auto", width: "100%" }}>
                     <div style={{ marginBottom: 24 }}>
                       <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Counselor Knowledge Agent</div>
-                      <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                        Student profile auto-included in all queries. Ask anything our partner Universties.
-                      </div>
                     </div>
 
                   </div>
@@ -835,7 +822,6 @@ function InternalMode() {
           {tab === "find" && (
             <div className="workflow-panel">
               <div className="workflow-title">🔍 Find Matching Programmes</div>
-              <div className="workflow-sub">All dropdowns — no free text. Nationality and student grades from the profile panel are auto-included in every query.</div>
 
               <div className="filter-grid">
                 <div className="ff">
@@ -928,48 +914,135 @@ function InternalMode() {
           {tab === "eligibility" && (
             <div className="workflow-panel">
               <div className="workflow-title">✅ Eligibility Check</div>
-              <div className="workflow-sub">
-                Checks all 7 criteria from Section 4: grade, subject prerequisites, IELTS, work experience, intake availability, nationality/visa, and post-study work permit.
+
+              {/* Student Profile Section */}
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "var(--primary)" }}>Student Profile</div>
+                
+                <div className="filter-grid" style={{ marginBottom: 16 }}>
+                  <div className="ff">
+                    <label>Nationality</label>
+                    <select value={profile.nationality} onChange={e => setP("nationality", e.target.value)}>
+                      <option value="">Select nationality…</option>
+                      {NATIONALITIES.map(n => <option key={n}>{n}</option>)}
+                    </select>
+                  </div>
+                  <div className="ff">
+                    <label>Exam System</label>
+                    <select value={profile.examSystem} onChange={e => setP("examSystem", e.target.value)}>
+                      <option value="">Select…</option>
+                      {EXAM_SYSTEMS.map(s => <option key={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div className="ff">
+                    <label>Overall Grade</label>
+                    <input
+                      placeholder={profile.examSystem ? OVERALL_PLACEHOLDER[profile.examSystem] : "Select exam first"}
+                      value={profile.overallGrade}
+                      onChange={e => setP("overallGrade", e.target.value)}
+                      disabled={!profile.examSystem} />
+                  </div>
+                </div>
+
+                {profile.examSystem && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--text-muted)", textTransform: "uppercase" }}>Subject Grades</div>
+                    <div className="filter-grid">
+                      {Object.keys(profile.subjects).map(sub => (
+                        <div className="ff" key={sub}>
+                          <label>{sub}</label>
+                          <select value={profile.subjects[sub]} onChange={e => setSub(sub, e.target.value)}>
+                            <option value="">–</option>
+                            {(GRADE_OPTIONS[profile.examSystem] || GRADE_OPTIONS["KCSE"]).map(g => <option key={g}>{g}</option>)}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="filter-grid" style={{ marginBottom: 16 }}>
+                  <div className="ff">
+                    <label>IELTS Band</label>
+                    <select value={profile.ielts} onChange={e => setP("ielts", e.target.value)}>
+                      <option value="">Not taken / N/A</option>
+                      {IELTS_BANDS.map(b => <option key={b}>{b}</option>)}
+                    </select>
+                  </div>
+                  <div className="ff">
+                    <label>Work Experience</label>
+                    <select value={profile.workExp} onChange={e => setP("workExp", e.target.value)}>
+                      {WORK_EXP.map(w => <option key={w}>{w}</option>)}
+                    </select>
+                  </div>
+                  <div className="ff" style={{ display: "flex", alignItems: "center", paddingTop: 20 }}>
+                    <label className="checkbox-row">
+                      <input type="checkbox" checked={profile.postStudy} onChange={e => setP("postStudy", e.target.checked)} />
+                      Post-study work priority
+                    </label>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+                  <button className="btn-secondary" onClick={clearProfile}>Clear Profile</button>
+                </div>
               </div>
 
-              {!hasProfile && (
-                <div className="warning-box">
-                  ⚠️ No student profile loaded. Fill in Exam System and Overall Grade in the left panel first for an accurate eligibility check.
+              {/* Course Selection */}
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "var(--primary)" }}>Programme Selection</div>
+                
+                <div className="filter-grid-2">
+                  <div className="ff">
+                    <label>Field of Study *</label>
+                    <select value={eligTarget.fieldOfStudy} onChange={e => {
+                      setEligTarget(t => ({ ...t, fieldOfStudy: e.target.value, course: "" }));
+                    }}>
+                      <option value="">Select field…</option>
+                      {Object.keys(COURSE_CATEGORIES).map(field => <option key={field}>{field}</option>)}
+                    </select>
+                  </div>
+                  <div className="ff">
+                    <label>Programme / Course *</label>
+                    <select value={eligTarget.course} onChange={e => setEligTarget(t => ({ ...t, course: e.target.value }))} disabled={!eligTarget.fieldOfStudy}>
+                      <option value="">Select programme…</option>
+                      {eligTarget.fieldOfStudy && COURSE_CATEGORIES[eligTarget.fieldOfStudy]?.map(course => 
+                        <option key={course}>{course}</option>
+                      )}
+                    </select>
+                  </div>
                 </div>
-              )}
 
-              {hasProfile && (
-                <div className="info-box">
-                  ✓ Profile loaded: <strong>{profile.nationality || "Student"}</strong> · {profile.examSystem} {profile.overallGrade}
-                  {profile.ielts ? " · IELTS " + profile.ielts : ""}
-                  {profile.workExp !== "0 years" ? " · " + profile.workExp + " experience" : ""}
-                </div>
-              )}
-
-              <div className="filter-grid-2">
-                <div className="ff">
-                  <label>Programme / Course *</label>
-                  <input placeholder="e.g. Computer Science, Medicine, MBA" value={eligTarget.course} onChange={e => setEligTarget(t => ({ ...t, course: e.target.value }))} />
-                </div>
-                <div className="ff">
-                  <label>University (optional)</label>
-                  <select value={eligTarget.university} onChange={e => setEligTarget(t => ({ ...t, university: e.target.value }))}>
-                    <option value="">All 7 partner universities</option>
-                    {UNIVERSITIES.map(u => <option key={u}>{u}</option>)}
-                  </select>
+                <div className="filter-grid-2">
+                  <div className="ff">
+                    <label>University (optional)</label>
+                    <select value={eligTarget.university} onChange={e => setEligTarget(t => ({ ...t, university: e.target.value }))}>
+                      <option value="">All 7 partner universities</option>
+                      {UNIVERSITIES.map(u => <option key={u}>{u}</option>)}
+                    </select>
+                  </div>
                 </div>
               </div>
 
               <div className="filter-actions">
                 <button className="btn-primary" style={{ maxWidth: 260 }}
-                  disabled={!eligTarget.course || eligLoading}
+                  disabled={!eligTarget.course || !profile.examSystem || !profile.overallGrade || eligLoading}
                   onClick={runEligibility}>
                   {eligLoading ? "Running eligibility check…" : "Run Full Eligibility Check →"}
                 </button>
-                <button className="btn-secondary" style={{ maxWidth: 80 }} onClick={() => { setEligResult(null); setEligTarget({ course: "", university: "" }); }}>
+                <button className="btn-secondary" style={{ maxWidth: 80 }} onClick={() => { 
+                  setEligResult(null); 
+                  setEligTarget({ fieldOfStudy: "", course: "", university: "" }); 
+                }}>
                   Clear
                 </button>
               </div>
+
+              {(!profile.examSystem || !profile.overallGrade) && (
+                <div className="warning-box">
+                  ⚠️ Please fill in Exam System and Overall Grade in the Student Profile section above for an accurate eligibility check.
+                </div>
+              )}
 
               {eligLoading && <Spinner label="Running Calculate_Eligibility + checking all 7 criteria…" />}
 
@@ -995,26 +1068,26 @@ function InternalMode() {
           {tab === "compare" && (
             <div className="workflow-panel">
               <div className="workflow-title">⚖️ Compare Programmes</div>
-              <div className="workflow-sub">
-                Add 2–3 programmes (e.g. "APU Computer Science"). All 13 Section 5 fields shown side by side. Eligibility cells auto-highlighted ✓/⚠/✗. Lowest-cost option flagged.
-              </div>
 
               {/* Dropdowns: University + Programme (all 40 options) */}
               <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap", alignItems: "flex-end" }}>
                 <div className="ff" style={{ flex: "1 1 180px", minWidth: 150 }}>
                   <label>University</label>
-                  <select value={compUni} onChange={e => setCompUni(e.target.value)}>
+                  <select value={compUni} onChange={e => {
+                    setCompUni(e.target.value);
+                    setCompProg(""); // Clear program when university changes
+                  }}>
                     <option value="">Select university…</option>
                     {UNIVERSITIES.map(u => <option key={u}>{u}</option>)}
                   </select>
                 </div>
                 <div className="ff" style={{ flex: "2 1 220px", minWidth: 180 }}>
                   <label>Programme</label>
-                  <select value={compProg} onChange={e => setCompProg(e.target.value)}>
+                  <select value={compProg} onChange={e => setCompProg(e.target.value)} disabled={!compUni}>
                     <option value="">Select programme…</option>
-                    {ALL_PROGRAMMES.map(([cat, progs]) => (
-                      <optgroup key={cat} label={cat}>
-                        {progs.map(p => <option key={p} value={p}>{p}</option>)}
+                    {compUni && UNIVERSITY_PROGRAMS[compUni] && Object.entries(UNIVERSITY_PROGRAMS[compUni]).map(([category, programs]) => (
+                      <optgroup key={category} label={category}>
+                        {programs.map(p => <option key={p} value={p}>{p}</option>)}
                       </optgroup>
                     ))}
                   </select>
@@ -1045,7 +1118,7 @@ function InternalMode() {
 
               {compItems.length < 2 && (
                 <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 14 }}>
-                  Select a university and programme, then click + Add. Add at least 2 to compare (max 3).
+                  Select a university first to see available programmes, then click + Add. Add at least 2 to compare (max 3).
                 </div>
               )}
 
@@ -1077,6 +1150,21 @@ function InternalMode() {
 
         </div>
       </div>
+
+      {/* ══ Vertical Tab Bar (Right Side) ══════════════════════════════════════ */}
+      <div className="int-tab-bar">
+        {[
+          { id: "chat",        icon: "💬", label: "Agent"    },
+          { id: "find",        icon: "🔍", label: "Find"     },
+          { id: "eligibility", icon: "✅", label: "Eligibility" },
+          { id: "compare",     icon: "⚖️",  label: "Compare"  },
+        ].map(t => (
+          <button key={t.id} className={`int-tab ${tab === t.id ? "active" : ""}`} onClick={() => setTab(t.id)}>
+            <span>{t.icon}</span> <span className="tab-label">{t.label}</span>
+          </button>
+        ))}
+      </div>
+
     </div>
   );
 }
