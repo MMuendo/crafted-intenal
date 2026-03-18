@@ -225,6 +225,23 @@ const css = `
   .results-box p:last-child { margin-bottom: 0; }
   .info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 11px 15px; font-size: 12px; color: #1e40af; margin-bottom: 18px; }
 
+  /* ── Currency Converter Widget ── */
+  .fx-widget { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 18px; box-shadow: var(--shadow-sm); }
+  .fx-widget-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 10px; }
+  .fx-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .fx-input { width: 130px; padding: 8px 12px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 14px; font-family: "Montserrat", sans-serif; outline: none; background: var(--bg); color: var(--text); }
+  .fx-input:focus { border-color: var(--accent); }
+  .fx-result { font-size: 16px; font-weight: 700; color: var(--primary); }
+  .fx-rate { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  /* ── QS Rankings Widget ── */
+  .qs-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 6px; }
+  .qs-table th { background: var(--primary); color: var(--bg); padding: 8px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+  .qs-table td { padding: 7px 12px; border: 1px solid var(--border); font-size: 13px; }
+  .qs-table tr:nth-child(even) td { background: var(--neutral); }
+  .qs-ranked { color: #1d4ed8; font-weight: 700; }
+  .qs-unranked { color: var(--text-muted); font-style: italic; }
+
   /* ── Animations ── */
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   @keyframes typingDot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.35; } 30% { transform: translateY(-5px); opacity: 1; } }
@@ -442,6 +459,31 @@ async function copyToClipboard(text) {
 
 const SESSION_ID = Math.random().toString(36).slice(2);
 
+// ─── Exchange Rate & QS Rankings ─────────────────────────────────────────────
+// USD → KES: mid-market rate, update quarterly. Source: CBK / XE.com
+const USD_TO_KES = 129.5; // March 2026
+
+// QS World University Rankings 2025 — official published figures
+// Source: topuniversities.com/university-rankings 2025
+const QS_RANKINGS = {
+  "APU":                          "501–510",
+  "SEGi":                         "Not ranked (QS)",
+  "Sunway":                       "351–400",
+  "Taylor's":                     "401–450",
+  "University of Cyberjaya":      "Not ranked (QS)",
+  "Quest International University": "Not ranked (QS)",
+  "MSU":                          "551–600",
+};
+
+function usdToKes(usdStr) {
+  if (!usdStr || typeof usdStr !== "string") return "—";
+  if (usdStr.toLowerCase().includes("contact")) return "Contact university";
+  const num = parseFloat(usdStr.replace(/[^0-9.]/g, ""));
+  if (isNaN(num)) return "—";
+  const kes = Math.round(num * USD_TO_KES);
+  return "KES " + kes.toLocaleString();
+}
+
 // ─── FIX 1: Broadened response key parsing ────────────────────────────────────
 // n8n agent nodes can return text under different keys depending on version and
 // node type. This chain tries every known key before falling back to JSON.stringify.
@@ -519,6 +561,71 @@ function Spinner({ label = "Retrieving from knowledge base…" }) {
     <div style={{ textAlign: "center", padding: "36px 20px" }}>
       <div style={{ width: 38, height: 38, margin: "0 auto 12px", border: "3px solid var(--border)", borderTop: "3px solid var(--primary)", borderRadius: "50%", animation: "spin 0.85s linear infinite" }} />
       <p style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>{label}</p>
+    </div>
+  );
+}
+
+// ─── Currency Converter Component ────────────────────────────────────────────
+function CurrencyConverter() {
+  const [usdVal, setUsdVal] = useState("");
+  const kes = usdVal ? usdToKes("$" + usdVal) : "";
+
+  return (
+    <div className="fx-widget">
+      <div className="fx-widget-title">💱 USD → KES Converter</div>
+      <div className="fx-row">
+        <span style={{ fontSize: 13, color: "var(--text-muted)" }}>USD $</span>
+        <input
+          className="fx-input"
+          type="number"
+          placeholder="e.g. 7450"
+          value={usdVal}
+          onChange={e => setUsdVal(e.target.value)}
+        />
+        <span style={{ fontSize: 18, color: "var(--border)" }}>→</span>
+        <div>
+          <div className="fx-result">{kes || "—"}</div>
+        </div>
+      </div>
+      <div className="fx-rate">Rate: 1 USD = KES {USD_TO_KES.toLocaleString()} · Mid-market March 2026 · Source: CBK / XE.com</div>
+    </div>
+  );
+}
+
+// ─── QS Rankings Component ────────────────────────────────────────────────────
+function QSRankings() {
+  const rows = [
+    { uni: "Sunway University",               rank: "351–400",    subject: "Top 150 globally — Hospitality & Leisure" },
+    { uni: "Taylor's University",             rank: "401–450",    subject: "Top 100 globally — Business & Management" },
+    { uni: "Asia Pacific University (APU)",   rank: "501–510",    subject: "Premier Digital Tech University (MDEC)" },
+    { uni: "Management & Science University (MSU)", rank: "551–600", subject: "Top 40 globally — Hospitality (QS)" },
+    { uni: "SEGi University",                 rank: "—",          subject: "5-star rated (SETARA); not in QS world list" },
+    { uni: "University of Cyberjaya (UoC)",   rank: "—",          subject: "MMC / WHO accredited; not in QS world list" },
+    { uni: "Quest International University (QIU)", rank: "—",    subject: "MMC recognised; Ipoh campus; not in QS world list" },
+  ];
+  return (
+    <div style={{ marginTop: 8 }}>
+      <table className="qs-table">
+        <thead>
+          <tr>
+            <th>University</th>
+            <th>QS World Rank 2025</th>
+            <th>Notable Rankings / Accreditations</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(r => (
+            <tr key={r.uni}>
+              <td style={{ fontWeight: 600 }}>{r.uni}</td>
+              <td className={r.rank === "—" ? "qs-unranked" : "qs-ranked"}>{r.rank === "—" ? "Not listed" : r.rank}</td>
+              <td style={{ color: "var(--text-muted)", fontSize: 12 }}>{r.subject}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>
+        Source: QS World University Rankings 2025 · topuniversities.com · Verify annually before advising students.
+      </div>
     </div>
   );
 }
@@ -606,7 +713,7 @@ function InternalMode() {
       filters.postStudy   ? `Post-study permit required.`       : "",
       filters.eligStatus !== "All results" ? `${filters.eligStatus} only.` : "",
       ps                  ? `Student: ${ps}.`                   : "",
-      `Compact table only — no prose: Programme | University | Fee/yr (USD) | Duration | Eligibility (✓/⚠/✗) | Entry Requirements. Max 10 rows.`,
+      `Compact table only — no prose: Programme | University | Fee/yr (USD) | Fee/yr (KES @129.5) | Duration | Eligibility (✓/⚠/✗) | Entry Requirements. Max 10 rows.`,
     ].filter(Boolean).join(" ");
 
     try {
@@ -690,7 +797,7 @@ function InternalMode() {
     const q = [
       `Compare: ${compItems.join(" vs ")}.`,
       ps ? `Student: ${ps}.` : "",
-      `Compact comparison table, rows only — no prose: Annual Fee (USD) | Duration | Eligibility (✓/⚠/✗) | Scholarship | Post-Study Permit | Entry Requirements.`,
+      `Compact comparison table, rows only — no prose: Annual Fee (USD) | Annual Fee (KES at 129.5) | Duration | Eligibility (✓/⚠/✗) | Scholarship | Entry Requirements.`,
       `Missing data → "Not in source". Highlight lowest cost. No living cost estimates.`,
     ].filter(Boolean).join(" ");
 
@@ -1065,7 +1172,7 @@ function InternalMode() {
                 </button>
               </div>
 
-              {compLoading && <Spinner label="Calling Retrieve_Fees, Retrieve_Prospectus, and Retrieve_Application_Forms…" />}
+              {compLoading && <Spinner label="Generating comparison with USD + KES fees…" />}
 
               {compResult && !compLoading && (
                 <div className="results-box">
@@ -1082,6 +1189,35 @@ function InternalMode() {
             </div>
           )}
 
+          {/* ── Tools Tab ─────────────────────────────────────────────────── */}
+          {tab === "tools" && (
+            <div className="workflow-panel">
+              <div className="workflow-title">🧰 Counselor Tools</div>
+              <div className="workflow-sub">Quick-reference utilities for live counseling sessions.</div>
+
+              <div style={{ marginBottom: 28 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "var(--primary)" }}>Currency Converter</div>
+                <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 10 }}>
+                  Convert fee quotes from USD to Kenyan Shillings instantly. Use this when sharing costs with students or parents.
+                </div>
+                <CurrencyConverter />
+              </div>
+
+              <div style={{ marginBottom: 28 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "var(--primary)" }}>QS World Rankings — Partner Universities</div>
+                <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 10 }}>
+                  QS World University Rankings 2025. Universities not on the QS world list may appear on subject or regional rankings — check topuniversities.com for the latest.
+                </div>
+                <QSRankings />
+              </div>
+
+              <div className="info-box">
+                💡 <strong>Counselor note:</strong> Always verify rankings and exchange rates before a student meeting.
+                QS rankings update annually in June. Exchange rate above uses March 2026 mid-market — check CBK or XE.com for the current rate.
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
 
@@ -1092,6 +1228,7 @@ function InternalMode() {
           { id: "find",        icon: "🔍", label: "Find"        },
           { id: "eligibility", icon: "✅", label: "Eligibility" },
           { id: "compare",     icon: "⚖️",  label: "Compare"    },
+          { id: "tools",       icon: "🧰", label: "Tools"       },
         ].map(t => (
           <button key={t.id} className={`int-tab ${tab === t.id ? "active" : ""}`} onClick={() => setTab(t.id)}>
             <span>{t.icon}</span> <span className="tab-label">{t.label}</span>
