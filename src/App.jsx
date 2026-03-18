@@ -152,12 +152,14 @@ const css = `
   .msg { display: flex; gap: 12px; max-width: 88%; }
   .msg-user { flex-direction: row-reverse; align-self: flex-end; }
   .msg-bubble { padding: 13px 18px; border-radius: 14px; font-size: 14px; line-height: 1.65; }
-  .bubble-ai { background: var(--neutral); color: var(--text); border-bottom-left-radius: 3px; }
+  .bubble-ai { background: var(--neutral); color: var(--text); border-bottom-left-radius: 3px; line-height: 1.75; }
   .bubble-user { background: var(--primary); color: var(--bg); border-bottom-right-radius: 3px; }
-  .bubble-ai strong { color: var(--primary); }
+  .bubble-ai strong { color: var(--primary); font-weight: 600; }
   .bubble-ai h2 { font-size: 17px; color: var(--primary); margin: 14px 0 7px; font-weight: 700; }
   .bubble-ai h3 { font-size: 14px; color: var(--accent-hover); margin: 12px 0 5px; font-weight: 600; }
   .bubble-ai h2:first-child, .bubble-ai h3:first-child { margin-top: 0; }
+  .bubble-ai p { margin-bottom: 10px; }
+  .bubble-ai p:last-child { margin-bottom: 0; }
   .bubble-ai ul { padding-left: 18px; margin: 7px 0; }
   .bubble-ai li { margin-bottom: 3px; font-size: 13px; }
   .bubble-ai code { font-family: "Courier New", monospace; font-size: 12px; background: var(--border); padding: 2px 5px; border-radius: 4px; }
@@ -216,6 +218,11 @@ const css = `
   .export-bar { display: flex; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
 
   .warning-box { background: #fffbea; border: 1px solid #fde68a; border-radius: 10px; padding: 11px 15px; font-size: 12px; color: #78350f; margin-bottom: 18px; }
+  .elig-band-green { background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; font-size: 13px; font-weight: 600; color: #14532d; }
+  .elig-band-yellow { background: #fffbea; border: 1.5px solid #fde68a; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; font-size: 13px; font-weight: 600; color: #78350f; }
+  .elig-band-red { background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; font-size: 13px; font-weight: 600; color: #991b1b; }
+  .results-box p { margin-bottom: 10px; line-height: 1.75; }
+  .results-box p:last-child { margin-bottom: 0; }
   .info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 11px 15px; font-size: 12px; color: #1e40af; margin-bottom: 18px; }
 
   /* ── Animations ── */
@@ -378,6 +385,11 @@ const ELIG_STATUS    = ["All results","Eligible only (✓)","Conditional (⚠)",
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatMarkdown(text) {
   if (!text) return "";
+  /// Pre-process: highlight eligibility band lines
+  text = text
+    .replace(/(BAND:[^\n]*GREEN[^\n]*)/gi, '<div class="elig-band-green">$1</div>')
+    .replace(/(BAND:[^\n]*YELLOW[^\n]*)/gi, '<div class="elig-band-yellow">$1</div>')
+    .replace(/(BAND:[^\n]*RED[^\n]*)/gi, '<div class="elig-band-red">$1</div>');
   let html = text
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
@@ -573,7 +585,7 @@ function InternalMode() {
   };
 
   // ── Find Options Tab ───────────────────────────────────────────────────────
-  const BLANK_FILTERS = { field: "", level: "", feeRange: "", intake: "", delivery: "", scholarship: false, postStudy: false, eligStatus: "All results" };
+  const BLANK_FILTERS = { field: "", course: "", level: "", feeRange: "", intake: "", delivery: "", scholarship: false, postStudy: false, eligStatus: "All results" };
   const [filters, setFilters]       = useState(BLANK_FILTERS);
   const setF = (k, v)               => setFilters(f => ({ ...f, [k]: v }));
   const [findResult, setFindResult]     = useState(null);
@@ -587,7 +599,7 @@ function InternalMode() {
     setFindLoading(true); setFindResult(null); setFindRaw(""); setResultCount(null);
     const ps = profileStr();
     const q = [
-      `List ${filters.field || "all"} programmes, ${filters.level || "degree"} level.`,
+      `List ${filters.course || filters.field || "all"} programmes, ${filters.level || "degree"} level.`,
       filters.feeRange    ? `Fee: ${filters.feeRange}.`         : "",
       filters.intake      ? `Intake: ${filters.intake}.`        : "",
       filters.scholarship ? `Scholarships only.`                : "",
@@ -748,12 +760,19 @@ function InternalMode() {
             <div className="workflow-panel">
               <div className="workflow-title">🔍 Find Matching Programmes</div>
 
-              <div className="filter-grid">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 14, marginBottom: 16 }}>
                 <div className="ff">
                   <label>Field of Study *</label>
-                  <select value={filters.field} onChange={e => setF("field", e.target.value)}>
+                  <select value={filters.field} onChange={e => { setF("field", e.target.value); setF("course", ""); }}>
                     <option value="">Select field…</option>
                     {Object.keys(COURSE_CATEGORIES).map(f => <option key={f}>{f}</option>)}
+                  </select>
+                </div>
+                <div className="ff">
+                  <label>Programme / Course</label>
+                  <select value={filters.course} onChange={e => setF("course", e.target.value)} disabled={!filters.field}>
+                    <option value="">All in field…</option>
+                    {filters.field && COURSE_CATEGORIES[filters.field]?.map(c => <option key={c}>{c}</option>)}
                   </select>
                 </div>
                 <div className="ff">
@@ -770,6 +789,8 @@ function InternalMode() {
                     {FEE_RANGES.map(r => <option key={r}>{r}</option>)}
                   </select>
                 </div>
+              </div>
+              <div className="filter-grid">
                 <div className="ff">
                   <label>Intake Month</label>
                   <select value={filters.intake} onChange={e => setF("intake", e.target.value)}>
@@ -869,7 +890,7 @@ function InternalMode() {
                 {profile.examSystem && (
                   <div style={{ marginBottom: 16 }}>
                     <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--text-muted)", textTransform: "uppercase" }}>Subject Grades</div>
-                    <div className="filter-grid">
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
                       {Object.keys(profile.subjects).map(sub => (
                         <div className="ff" key={sub}>
                           <label>{sub}</label>
@@ -913,7 +934,7 @@ function InternalMode() {
               <div style={{ marginBottom: 24 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "var(--primary)" }}>Programme Selection</div>
 
-                <div className="filter-grid-2">
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 16 }}>
                   <div className="ff">
                     <label>Field of Study *</label>
                     <select value={eligTarget.fieldOfStudy} onChange={e => {
@@ -932,9 +953,6 @@ function InternalMode() {
                       )}
                     </select>
                   </div>
-                </div>
-
-                <div className="filter-grid-2">
                   <div className="ff">
                     <label>University (optional)</label>
                     <select value={eligTarget.university} onChange={e => setEligTarget(t => ({ ...t, university: e.target.value }))}>
