@@ -242,6 +242,11 @@ const css = `
   .qs-ranked { color: #1d4ed8; font-weight: 700; }
   .qs-unranked { color: var(--text-muted); font-style: italic; }
 
+  /* ── Responsive Grid Classes ── */
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+  .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
+
   /* ── Animations ── */
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   @keyframes typingDot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.35; } 30% { transform: translateY(-5px); opacity: 1; } }
@@ -249,13 +254,23 @@ const css = `
   /* ── Mobile ── */
   @media (max-width: 768px) {
     html, body, #root, .app { overflow: visible; height: auto; }
+    /* Grid collapse on mobile */
+    .grid-4 { grid-template-columns: 1fr 1fr; }
+    .grid-3 { grid-template-columns: 1fr 1fr; }
+    .grid-5 { grid-template-columns: 1fr 1fr; }
+    /* QS table — hide 3rd column on mobile, show only uni + rank */
+    .qs-table td:nth-child(3), .qs-table th:nth-child(3) { display: none; }
+    /* FX widget full width */
+    .fx-input { width: 100%; }
+    .fx-row { flex-direction: column; align-items: flex-start; gap: 8px; }
     .header { padding: 0 14px; }
     .header-subtitle { display: none; }
     .internal-wrapper { flex-direction: column; height: auto; min-height: 0; overflow: visible; }
     .int-tab-bar { flex-direction: row; overflow-x: auto; flex-wrap: nowrap; padding: 8px; gap: 4px; width: 100%; border-left: none; border-top: 1px solid var(--border); order: 2; position: sticky; bottom: 0; top: auto; height: auto; z-index: 50; background: var(--bg); }
-    .int-tab { padding: 8px 12px; font-size: 11px; min-width: 80px; text-align: center; }
+    .int-tab { padding: 6px 8px; font-size: 10px; min-width: 62px; text-align: center; }
     .main-panel { margin: 0; border-radius: 0; border: none; order: 1; }
-    .chat-area { padding: 14px 12px; max-height: calc(100vh - 220px); gap: 14px; }
+    .profile-sidebar { display: none; }
+    .chat-area { padding: 14px 12px; min-height: 300px; gap: 14px; }
     .msg { max-width: 94%; }
     .msg-bubble { padding: 10px 13px; font-size: 13px; }
     .input-bar { padding: 10px 12px; }
@@ -276,6 +291,7 @@ const css = `
 
   @media (max-width: 400px) {
     .filter-grid { grid-template-columns: 1fr; }
+    .grid-4, .grid-3, .grid-5 { grid-template-columns: 1fr; }
     .int-tab .tab-label { font-size: 10px; }
     .int-tab { padding: 6px 8px; min-width: 70px; }
   }
@@ -867,7 +883,7 @@ function InternalMode() {
             <div className="workflow-panel">
               <div className="workflow-title">🔍 Find Matching Programmes</div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 14, marginBottom: 16 }}>
+              <div className="grid-4">
                 <div className="ff">
                   <label>Field of Study *</label>
                   <select value={filters.field} onChange={e => { setF("field", e.target.value); setF("course", ""); }}>
@@ -997,7 +1013,7 @@ function InternalMode() {
                 {profile.examSystem && (
                   <div style={{ marginBottom: 16 }}>
                     <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--text-muted)", textTransform: "uppercase" }}>Subject Grades</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
+                    <div className="grid-5">
                       {Object.keys(profile.subjects).map(sub => (
                         <div className="ff" key={sub}>
                           <label>{sub}</label>
@@ -1041,7 +1057,7 @@ function InternalMode() {
               <div style={{ marginBottom: 24 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "var(--primary)" }}>Programme Selection</div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 16 }}>
+                <div className="grid-3">
                   <div className="ff">
                     <label>Field of Study *</label>
                     <select value={eligTarget.fieldOfStudy} onChange={e => {
