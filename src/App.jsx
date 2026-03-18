@@ -68,7 +68,7 @@ const css = `
   .field-group input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(253,184,19,0.15); }
 
   /* ── Internal Console Wrapper ── */
-  .internal-wrapper { display: flex; flex: 1; height: calc(100vh - 64px); overflow: visible; background: var(--neutral); }
+  .internal-wrapper { display: flex; flex: 1; height: calc(100vh - 64px); overflow: hidden; background: var(--neutral); }
 
   /* ── Profile Sidebar ── */
   .profile-sidebar {
@@ -109,12 +109,9 @@ const css = `
     width: 200px;
     min-width: 200px;
     flex-shrink: 0;
-    /* Stick to viewport while content scrolls */
-    position: sticky;
-    top: 0;
-    height: calc(100vh - 64px);
+    /* Always visible — does not scroll with content */
+    height: 100%;
     overflow-y: auto;
-    align-self: flex-start;
   }
   .int-tab {
     padding: 12px 16px;
@@ -146,8 +143,8 @@ const css = `
     border: 1px solid var(--border);
     border-right: none;
     margin: 12px 0 12px 12px;
-    /* Allow main panel to scroll independently of the sticky tab bar */
     min-height: 0;
+    height: 100%;
   }
 
   /* ── Chat ── */
@@ -696,7 +693,7 @@ function InternalMode() {
     <div className="internal-wrapper">
 
       {/* ══ Main Content Panel ══════════════════════════════════════════════ */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, minHeight: 0 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, minHeight: 0, height: "100%" }}>
         <div className="main-panel">
 
           {/* ── Chat Tab ──────────────────────────────────────────────────── */}
