@@ -18,9 +18,9 @@ const css = `
     --success: #28a745; --error: #dc3545;
   }
 
-  html, body, #root { height: 100%; }
-  body { font-family: "Montserrat", sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
-  .app { display: flex; flex-direction: column; min-height: 100vh; }
+  html, body, #root { height: 100%; overflow: hidden; }
+  body { font-family: "Montserrat", sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
+  .app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
   /* ── Header ── */
   .header {
@@ -68,7 +68,7 @@ const css = `
   .field-group input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(253,184,19,0.15); }
 
   /* ── Internal Console Wrapper ── */
-  .internal-wrapper { display: flex; flex: 1; height: calc(100vh - 64px); overflow: hidden; background: var(--neutral); }
+  .internal-wrapper { display: flex; flex: 1; height: calc(100vh - 64px); max-height: calc(100vh - 64px); overflow: hidden; background: var(--neutral); }
 
   /* ── Profile Sidebar ── */
   .profile-sidebar {
@@ -148,7 +148,7 @@ const css = `
   }
 
   /* ── Chat ── */
-  .chat-area { flex: 1; overflow-y: auto; padding: 28px 32px; display: flex; flex-direction: column; gap: 18px; }
+  .chat-area { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 28px 32px; display: flex; flex-direction: column; gap: 18px; min-height: 0; }
   .msg { display: flex; gap: 12px; max-width: 88%; }
   .msg-user { flex-direction: row-reverse; align-self: flex-end; }
   .msg-bubble { padding: 13px 18px; border-radius: 14px; font-size: 14px; line-height: 1.65; }
@@ -179,7 +179,7 @@ const css = `
   .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
   /* ── Workflow Panels ── */
-  .workflow-panel { flex: 1; overflow-y: auto; padding: 24px 32px; }
+  .workflow-panel { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 24px 32px; min-height: 0; }
   .workflow-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
   .workflow-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 20px; }
 
@@ -224,9 +224,10 @@ const css = `
 
   /* ── Mobile ── */
   @media (max-width: 768px) {
+    html, body, #root, .app { overflow: visible; height: auto; }
     .header { padding: 0 14px; }
     .header-subtitle { display: none; }
-    .internal-wrapper { flex-direction: column; height: auto; min-height: calc(100vh - 64px); overflow: visible; }
+    .internal-wrapper { flex-direction: column; height: auto; min-height: 0; overflow: visible; }
     .int-tab-bar { flex-direction: row; overflow-x: auto; flex-wrap: nowrap; padding: 8px; gap: 4px; width: 100%; border-left: none; border-top: 1px solid var(--border); order: 2; position: sticky; bottom: 0; top: auto; height: auto; z-index: 50; background: var(--bg); }
     .int-tab { padding: 8px 12px; font-size: 11px; min-width: 80px; text-align: center; }
     .main-panel { margin: 0; border-radius: 0; border: none; order: 1; }
